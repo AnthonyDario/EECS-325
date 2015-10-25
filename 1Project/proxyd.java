@@ -106,18 +106,21 @@ public class proxyd {
                         byteRequest.add((byte)byteRead);
                         request += (char)byteRead;
  
-                        if ((char) byteRead == '\n' || (char) byteRead == '\r') {
+                        if ((char) byteRead == '\n' || 
+                            (char) byteRead == '\r') {
                             newLines++;
                         }
                         else {
                             newLines = 0;
                         }
                         if (newLines == 4) {
-                            System.out.println(request);
+                            System.out.println("\n" + request);
                             headers = request.split("\n");
                             host = headers[1].split(" ")[1];
                             host = host.substring(0, host.length() - 1);
-                            Byte[] requestArray = byteRequest.toArray(new Byte[0]);
+                            Byte[] requestArray = 
+                                byteRequest.toArray(new Byte[0]);
+
                             recieveResponse(host, requestArray);
                         }
                     }
@@ -125,7 +128,12 @@ public class proxyd {
                     System.out.println(e);
                 }
                 finally {
-                    client.close(); 
+                    try {
+                        client.close(); 
+                    }
+                    catch (IOException e) {
+                        System.out.println("client.close() messed up: " + e);
+                    }
                 }
 
             }
@@ -143,6 +151,7 @@ public class proxyd {
     private void recieveResponse(String host, Byte[] request) {
         
         try {
+            byte[] byteRequest = toPrimativeArray(request);
             server = new Socket(host, 80);
             System.out.println("MADE THE SOCKET SUCKA");
            
@@ -151,15 +160,16 @@ public class proxyd {
             final OutputStream serverOutput = server.getOutputStream();
 
             // send the clients request
-            serverInput.write(request);
-            serverInput.flush();
+            serverOutput.write(byteRequest);
+            serverOutput.flush();
+            System.out.println("wrote to the server");
 
             // get the servers response
             String response = "";
-            byte[] response = new byte[4096];
-            int bytesRead;
-            while (byteRead = serverOutput.read() >= 0){
-                
+            byte[] byteResponse = new byte[4096];
+            int byteRead;
+            while ((byteRead = serverInput.read()) >= 0){
+                response += (char)byteRead;
             }
             System.out.println(response);
         }
@@ -167,7 +177,12 @@ public class proxyd {
             System.out.println(e + "proxy could not resolve: " + host);
         }
         finally {
-            server.close();
+            try {
+                server.close();
+            }
+            catch (IOException e) {
+                System.out.println("server.close() messed up: " + e);
+            }
         }
 
     }
@@ -177,8 +192,15 @@ public class proxyd {
      * @param array The array of Bytes
      * @return The array converted to bytes
      */
-    private byte[] toPrimativeArray(Byte[] array) {
+    private byte[] toPrimativeArray(Byte[] input) {
 
+        byte[] output = new byte[input.length];
+
+        for (int i = 0; i < input.length; i++) {
+           output[i] = input[i].byteValue();
+        }
+
+        return output;
     }
 
     /**
