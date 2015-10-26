@@ -173,8 +173,9 @@ public class proxyd {
             List<Byte> byteResponse = new ArrayList<Byte>(); 
             int byteRead;
             int newLines = 0;
-            int times = 0;
-            while ((byteRead = serverInput.read()) >= 0){
+            while (newLines < 4){
+
+                byteRead = serverInput.read();
 
                 //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
                 response += (char)byteRead;
@@ -188,27 +189,49 @@ public class proxyd {
                     newLines = 0;
                 }
 
-                if (newLines == 4) {
-                    times++;
-                    if (times == 2) {
-                        server.close();
-
-                        return toPrimativeArray(
-                                    byteResponse.toArray(new Byte[0])
-                               );
-                    }
-                    else {
-                        System.out.println("headers: \n" + response);
-                    }
-                }
             }
 
-            System.out.println("ended loop");
+            System.out.println("headers: \n" + response);
+
+            // get the length of the response body 
+            int contentLength;
+            if ((contentLength = getContentLength(response)) >= 0){
+               System.out.println("\nContent-Length: " + contentLength); 
+            }
+            else if (isChunked(response)){
+                System.out.println("Transfer-Encoding: Chunked");
+            }
+            else {
+
+            }
+
+            newLines = 0;
+            while (newLines < 4){
+
+                byteRead = serverInput.read();
+
+                //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
+                response += (char)byteRead;
+                byteResponse.add((byte)byteRead);
+
+                if ((char) byteRead == '\n' || 
+                    (char) byteRead == '\r') {
+                    newLines++;
+                }
+                else {
+                    newLines = 0;
+                }
+
+            }
+
+            // TODO Content-length, and transfer-encodeing chunked
+            server.close();
 
             return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+
         }
         catch (Exception e) {
-            System.out.println(e + "proxy could not resolve: " + host);
+            System.out.println(e + "\nproxy could not resolve: " + host + "\n");
             return new byte[0];
         }
         finally {
@@ -228,13 +251,59 @@ public class proxyd {
      * @return the host
      */
     private String getHost(String request) {
-
         
         String[] headers = request.split("\n");
         String host = headers[1].split(" ")[1];
         host = host.substring(0, host.length() - 1);
 
         return host;
+    }
+
+    /**
+     * This returns the content length if the content length header exists, if 
+     * there is no content length header then this will return -1
+     * @param response the request we want the content length of
+     * @return the length of the request body or -1 if the header doesn't exist
+     */
+    private int getContentLength(String response) {
+
+        int length = -1;
+        String lengthString;
+        String currentHeader;
+        String[] headers = response.split("\n");
+
+        for (int i = 0; i < headers.length; i++) {
+            currentHeader = headers[i].split(" ")[0] ;
+            System.out.println(currentHeader + " : Content-Length:");
+            if (currentHeader.equals("Content-Length:")) {
+                lengthString = headers[i].split(" ")[1];
+                lengthString = 
+                    lengthString.substring(0, lengthString.length() - 1);
+
+                length = Integer.parseInt(lengthString);
+                System.out.println("length: " + length);
+            }
+        }
+
+        return length;
+    }
+
+    /** 
+     * This returns true if the content in the response is chunked
+     * @param response the response being checked
+     * @return true if the response is chunked
+     */
+    private boolean isChunked(String response) {
+        
+        String currentHeader;
+        String[] headers = response.split("\n");
+        
+        for(int i = 0; i < headers.length; i++) {
+            if (headers[i].equals("Transfer-Encoding: chunked\r\n")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
