@@ -193,7 +193,7 @@ public class proxyd {
 
             }
 
-            // get the length of the response body 
+            // depending on headers, read the length of the response body 
             int contentLength;
             if ((contentLength = getContentLength(response)) >= 0){
 
@@ -224,10 +224,8 @@ public class proxyd {
 
                 }
             }
-            else {
-                System.out.println("cached");
-            }
 
+            // close the server and return the response
             server.close();
 
             return toPrimativeArray(byteResponse.toArray(new Byte[0]));
