@@ -37,6 +37,7 @@ public class proxyd {
 
             try {
 
+                count++;
                 // wait for a connection
                 System.out.println("waiting for connection " + count + "...");
                 client = localSocket.accept();
@@ -109,19 +110,18 @@ public class proxyd {
                         }
                         if (newLines == 4) {
                             System.out.println("\n" + request);
-                            headers = request.split("\n");
-                            host = headers[1].split(" ")[1];
-                            host = host.substring(0, host.length() - 1);
+                            host = getHost(request);
                             Byte[] requestArray = 
                                 byteRequest.toArray(new Byte[0]);
 
                             response = recieveResponse(host, requestArray);
 
                             System.out.println("got response: \n");
+                            /*
                             for(int i = 0; i < response.length; i++) {
                                 System.out.print((char)response[i]);
                             }
-
+                            */
                             clientOutput.write(response);
                             clientOutput.flush();
                             System.out.println("wrote to client");
@@ -176,7 +176,7 @@ public class proxyd {
             int times = 0;
             while ((byteRead = serverInput.read()) >= 0){
 
-                System.out.print((char)byteRead);
+                //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
                 response += (char)byteRead;
                 byteResponse.add((byte)byteRead);
 
@@ -197,8 +197,13 @@ public class proxyd {
                                     byteResponse.toArray(new Byte[0])
                                );
                     }
+                    else {
+                        System.out.println("headers: \n" + response);
+                    }
                 }
             }
+
+            System.out.println("ended loop");
 
             return toPrimativeArray(byteResponse.toArray(new Byte[0]));
         }
@@ -215,6 +220,21 @@ public class proxyd {
             }
         }
 
+    }
+
+    /**
+     * This gets the host from a request
+     * @param request the request to parse
+     * @return the host
+     */
+    private String getHost(String request) {
+
+        
+        String[] headers = request.split("\n");
+        String host = headers[1].split(" ")[1];
+        host = host.substring(0, host.length() - 1);
+
+        return host;
     }
 
     /**
