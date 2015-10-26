@@ -49,22 +49,15 @@ public class proxyd {
                 // forward the clients request to the server
                 sendRequest(clientInput, clientOutput);
                                 
-
-                // Server streams
-                //final InputStream serverInput = server.getInputStream();
-                //final OutputStream serverOutput = server.getOutputStream();
-
+                System.out.println("request sent");
 
             }
             catch (IOException e) {
-                System.out.println("catch block");
                 System.err.println(e);
             }
             finally {
-                System.out.println("finally block");
                 try{
                     if (server != null) {
-
                         server.close();
                     }
                     if (client != null) {
@@ -72,7 +65,6 @@ public class proxyd {
                     }
                 }
                 catch(IOException e) {
-                    System.out.println("catch block");
                     System.err.println(e);
                 }
 
@@ -124,7 +116,10 @@ public class proxyd {
                                 byteRequest.toArray(new Byte[0]);
 
                             response = recieveResponse(host, requestArray);
-                            System.out.println("got response: \n" + response);
+                            System.out.println("got response: \n");
+                            for (int i = 0; i < response.length; i++) {
+                                System.out.print((char)response[i]);
+                            }
                             clientOutput.write(response);
                         }
                     }
@@ -165,7 +160,6 @@ public class proxyd {
             // send the clients request
             serverOutput.write(byteRequest);
             serverOutput.flush();
-            System.out.println("wrote to the server");
 
             // get the servers response
             String response = "";
@@ -186,14 +180,12 @@ public class proxyd {
                 }
 
                 if (newLines == 4) {
-                    System.out.println(response);   
                     server.close();
-                    System.out.println("closed server");
                     return toPrimativeArray(byteResponse.toArray(new Byte[0]));
                 }
             }
 
-            return new byte[0];
+            return toPrimativeArray(byteResponse.toArray(new Byte[0]));
         }
         catch (Exception e) {
             System.out.println(e + "proxy could not resolve: " + host);
