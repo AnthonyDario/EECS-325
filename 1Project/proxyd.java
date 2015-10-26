@@ -49,7 +49,7 @@ public class proxyd {
                 // forward the clients request to the server
                 sendRequest(clientInput, clientOutput);
                                 
-                System.out.println("request sent");
+                System.out.println("\nrequest sent\n");
 
             }
             catch (IOException e) {
@@ -116,11 +116,17 @@ public class proxyd {
                                 byteRequest.toArray(new Byte[0]);
 
                             response = recieveResponse(host, requestArray);
+
                             System.out.println("got response: \n");
-                            for (int i = 0; i < response.length; i++) {
+                            for(int i = 0; i < response.length; i++) {
                                 System.out.print((char)response[i]);
                             }
+
                             clientOutput.write(response);
+                            clientOutput.flush();
+                            System.out.println("wrote to client");
+
+                            break;
                         }
                     }
                 } catch (Exception e) {
@@ -152,6 +158,7 @@ public class proxyd {
         try {
             byte[] byteRequest = toPrimativeArray(request);
             server = new Socket(host, 80);
+            System.out.println("made the socket");
            
             // get server Streams
             final InputStream serverInput = server.getInputStream();
@@ -169,6 +176,7 @@ public class proxyd {
             int times = 0;
             while ((byteRead = serverInput.read()) >= 0){
 
+                System.out.print((char)byteRead);
                 response += (char)byteRead;
                 byteResponse.add((byte)byteRead);
 
@@ -184,7 +192,10 @@ public class proxyd {
                     times++;
                     if (times == 2) {
                         server.close();
-                        return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+
+                        return toPrimativeArray(
+                                    byteResponse.toArray(new Byte[0])
+                               );
                     }
                 }
             }
