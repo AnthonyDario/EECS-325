@@ -197,34 +197,38 @@ public class proxyd {
             int contentLength;
             if ((contentLength = getContentLength(response)) >= 0){
                System.out.println("\nContent-Length: " + contentLength); 
+
+               for(int i = 0; i < contentLength; i++) {
+                   byteRead = serverInput.read();
+                   response += (char)byteRead;
+                   byteResponse.add((byte)byteRead);
+               }
             }
             else if (isChunked(response)){
-                System.out.println("Transfer-Encoding: Chunked");
+
+                newLines = 0;
+                while (newLines < 4){
+
+                    byteRead = serverInput.read();
+
+                    //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
+                    response += (char)byteRead;
+                    byteResponse.add((byte)byteRead);
+
+                    if ((char) byteRead == '\n' || 
+                        (char) byteRead == '\r') {
+                        newLines++;
+                    }
+                    else {
+                        newLines = 0;
+                    }
+
+                }
             }
             else {
-
+                System.out.println("cached");
             }
 
-            newLines = 0;
-            while (newLines < 4){
-
-                byteRead = serverInput.read();
-
-                //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
-                response += (char)byteRead;
-                byteResponse.add((byte)byteRead);
-
-                if ((char) byteRead == '\n' || 
-                    (char) byteRead == '\r') {
-                    newLines++;
-                }
-                else {
-                    newLines = 0;
-                }
-
-            }
-
-            // TODO Content-length, and transfer-encodeing chunked
             server.close();
 
             return toPrimativeArray(byteResponse.toArray(new Byte[0]));
