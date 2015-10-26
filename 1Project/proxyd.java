@@ -166,6 +166,7 @@ public class proxyd {
             List<Byte> byteResponse = new ArrayList<Byte>(); 
             int byteRead;
             int newLines = 0;
+            int times = 0;
             while ((byteRead = serverInput.read()) >= 0){
 
                 response += (char)byteRead;
@@ -180,8 +181,11 @@ public class proxyd {
                 }
 
                 if (newLines == 4) {
-                    server.close();
-                    return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+                    times++;
+                    if (times == 2) {
+                        server.close();
+                        return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+                    }
                 }
             }
 
