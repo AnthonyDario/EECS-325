@@ -10,6 +10,7 @@ public class proxyd {
 
     private Socket client;
     private Socket server;
+
     /**
      * This will start the server
      *
@@ -17,8 +18,9 @@ public class proxyd {
      * @param remotePort    The outward facing port
      * @param localPort     The localPort for the proxy
      */
-    private void runServer(int remotePort, int localPort) 
-                                  throws IOException{
+    private void runServer(int remotePort, 
+                           int localPort) 
+                           throws IOException{
 
         int count = 0;
         // Socket that listens for communications
@@ -28,7 +30,6 @@ public class proxyd {
         final byte[] requestStream = new byte[1024];
         byte[] replyStream = new byte[4096];
 
-        System.out.println("starting loop");
         // the server loop
         while (true){
     
@@ -50,7 +51,7 @@ public class proxyd {
                 // forward the clients request to the server
                 sendRequest(clientInput, clientOutput);
                                 
-                System.out.println("\nrequest sent\n");
+                System.out.println("request handled\n");
 
             }
             catch (IOException e) {
@@ -109,22 +110,19 @@ public class proxyd {
                             newLines = 0;
                         }
                         if (newLines == 4) {
-                            System.out.println("\n" + request);
                             host = getHost(request);
+
+                            System.out.println("forwarding request for: " + 
+                                               host
+                                              );
+
                             Byte[] requestArray = 
                                 byteRequest.toArray(new Byte[0]);
 
                             response = recieveResponse(host, requestArray);
 
-                            System.out.println("got response: \n");
-                            /*
-                            for(int i = 0; i < response.length; i++) {
-                                System.out.print((char)response[i]);
-                            }
-                            */
                             clientOutput.write(response);
                             clientOutput.flush();
-                            System.out.println("wrote to client");
 
                             break;
                         }
@@ -158,7 +156,6 @@ public class proxyd {
         try {
             byte[] byteRequest = toPrimativeArray(request);
             server = new Socket(host, 80);
-            System.out.println("made the socket");
            
             // get server Streams
             final InputStream serverInput = server.getInputStream();
@@ -177,7 +174,6 @@ public class proxyd {
 
                 byteRead = serverInput.read();
 
-                //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
                 response += (char)byteRead;
                 byteResponse.add((byte)byteRead);
 
@@ -191,12 +187,9 @@ public class proxyd {
 
             }
 
-            System.out.println("headers: \n" + response);
-
             // get the length of the response body 
             int contentLength;
             if ((contentLength = getContentLength(response)) >= 0){
-               System.out.println("\nContent-Length: " + contentLength); 
 
                for(int i = 0; i < contentLength; i++) {
                    byteRead = serverInput.read();
@@ -286,7 +279,6 @@ public class proxyd {
                     lengthString.substring(0, lengthString.length() - 1);
 
                 length = Integer.parseInt(lengthString);
-                System.out.println("length: " + length);
             }
         }
 
@@ -336,10 +328,14 @@ public class proxyd {
     public static void main(String[] args) throws IOException {
         
         proxyd proxy = new proxyd();
-        // Constants
         String host = "localhost";
         int remotePort = 100;
         int localPort = 5000;
+
+        // determine the port to tun on
+        if (args[0].equals("-port")) {
+            localPort = Integer.parseInt(args[1]);
+        }
 
         // Start-up message
         System.out.println("Starting proxy for " + host + ":" + remotePort
