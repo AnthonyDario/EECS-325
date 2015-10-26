@@ -47,7 +47,7 @@ public class proxyd {
                 final OutputStream clientOutput = client.getOutputStream();
 
                 // forward the clients request to the server
-                sendRequest(clientInput);
+                sendRequest(clientInput, clientOutput);
                                 
 
                 // Server streams
@@ -86,7 +86,8 @@ public class proxyd {
      * This sends a clients request to the server
      * @param clientInput the input stream from the client
      */
-    private void sendRequest(InputStream clientInput) {
+    private void sendRequest(InputStream clientInput, 
+                             OutputStream clientOutput) {
 
         // Send the clients request to the server on a seperate thread
         Thread clientToServer = new Thread() {
@@ -96,6 +97,7 @@ public class proxyd {
                 try {
                     int byteRead;
                     int newLines = 0;
+                    byte[] response;
                     List<Byte> byteRequest = new ArrayList<Byte>();
                     String request = "";
                     String host = "";
@@ -121,7 +123,9 @@ public class proxyd {
                             Byte[] requestArray = 
                                 byteRequest.toArray(new Byte[0]);
 
-                            recieveResponse(host, requestArray);
+                            response = recieveResponse(host, requestArray);
+                            System.out.println("got response: \n" + response);
+                            clientOutput.write(response);
                         }
                     }
                 } catch (Exception e) {
@@ -148,12 +152,11 @@ public class proxyd {
      * @param host The host for the socket
      * @param port the port for the socket
      */
-    private void recieveResponse(String host, Byte[] request) {
+    private byte[] recieveResponse(String host, Byte[] request) {
         
         try {
             byte[] byteRequest = toPrimativeArray(request);
             server = new Socket(host, 80);
-            System.out.println("MADE THE SOCKET SUCKA");
            
             // get server Streams
             final InputStream serverInput = server.getInputStream();
@@ -166,15 +169,35 @@ public class proxyd {
 
             // get the servers response
             String response = "";
-            byte[] byteResponse = new byte[4096];
+            List<Byte> byteResponse = new ArrayList<Byte>(); 
             int byteRead;
+            int newLines = 0;
             while ((byteRead = serverInput.read()) >= 0){
+
                 response += (char)byteRead;
+                byteResponse.add((byte)byteRead);
+
+                if ((char) byteRead == '\n' || 
+                    (char) byteRead == '\r') {
+                    newLines++;
+                }
+                else {
+                    newLines = 0;
+                }
+
+                if (newLines == 4) {
+                    System.out.println(response);   
+                    server.close();
+                    System.out.println("closed server");
+                    return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+                }
             }
-            System.out.println(response);
+
+            return new byte[0];
         }
         catch (Exception e) {
             System.out.println(e + "proxy could not resolve: " + host);
+            return new byte[0];
         }
         finally {
             try {
