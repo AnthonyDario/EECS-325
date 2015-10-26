@@ -3,7 +3,9 @@ import java.net.*;
 import java.util.*;
 
 /**
- * A simple web proxy
+ * A simple web proxy that will forward HTTP requests and return the responses.
+ * When running the proxy use the argument -port <port#> to specify which port 
+ * to run the proxy on. 
  * @author Anthony Dario
  */
 public class proxyd {
@@ -22,7 +24,9 @@ public class proxyd {
                            int localPort) 
                            throws IOException{
 
+        // a count of the connections gone through this proxy
         int count = 0;
+
         // Socket that listens for communications
         ServerSocket localSocket = new ServerSocket(localPort);
 
@@ -39,6 +43,7 @@ public class proxyd {
             try {
 
                 count++;
+
                 // wait for a connection
                 System.out.println("waiting for connection " + count + "...");
                 client = localSocket.accept();
@@ -57,6 +62,7 @@ public class proxyd {
             catch (IOException e) {
                 System.err.println(e);
             }
+            // make sure that the sockets are closed
             finally {
                 try{
                     if (server != null) {
@@ -97,7 +103,10 @@ public class proxyd {
                     String host = "";
                     String[] headers;
 
-                    while ((byteRead = clientInput.read()) >= 0) {
+                    // request is over when we hit a single blank line 
+                    while (newLines < 4) {
+
+                        byteRead = clientInput.read();
 
                         byteRequest.add((byte)byteRead);
                         request += (char)byteRead;
@@ -109,24 +118,21 @@ public class proxyd {
                         else {
                             newLines = 0;
                         }
-                        if (newLines == 4) {
-                            host = getHost(request);
-
-                            System.out.println("forwarding request for: " + 
-                                               host
-                                              );
-
-                            Byte[] requestArray = 
-                                byteRequest.toArray(new Byte[0]);
-
-                            response = recieveResponse(host, requestArray);
-
-                            clientOutput.write(response);
-                            clientOutput.flush();
-
-                            break;
-                        }
                     }
+
+                    // get the requested server from the request
+                    host = getHost(request);
+
+                    System.out.println("request for: " + host);
+
+                    Byte[] requestArray = 
+                        byteRequest.toArray(new Byte[0]);
+
+                    // get the response from the host and write it to the client
+                    response = recieveResponse(host, requestArray);
+                    clientOutput.write(response);
+                    clientOutput.flush();
+
                 } catch (Exception e) {
                     System.out.println(e);
                 }
