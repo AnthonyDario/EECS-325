@@ -273,8 +273,9 @@ public class proxyd {
         String[] headers = response.split("\n");
 
         for (int i = 0; i < headers.length; i++) {
+
             currentHeader = headers[i].split(" ")[0] ;
-            System.out.println(currentHeader + " : Content-Length:");
+
             if (currentHeader.equals("Content-Length:")) {
                 lengthString = headers[i].split(" ")[1];
                 lengthString = 
@@ -299,7 +300,8 @@ public class proxyd {
         String[] headers = response.split("\n");
         
         for(int i = 0; i < headers.length; i++) {
-            if (headers[i].equals("Transfer-Encoding: chunked\r\n")) {
+            currentHeader =  headers[i].substring(0, headers[i].length() - 1);
+            if (currentHeader.equals("Transfer-Encoding: chunked")) {
                 return true;
             }
         }
