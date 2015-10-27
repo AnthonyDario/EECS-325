@@ -129,8 +129,9 @@ public class proxyd {
 
                     System.out.println(method + " request for: " + host);
 
+                    // if this is not a get method then we need th body also
                     if (!method.equals("GET")) {
-                        
+                       request = getBody(clientInput, request);
                     }
 
                     // get the response from the host and write it to the client
