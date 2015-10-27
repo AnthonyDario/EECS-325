@@ -101,6 +101,7 @@ public class proxyd {
                     List<Byte> byteRequest = new ArrayList<Byte>();
                     String request = "";
                     String host = "";
+                    String method = "";
                     String[] headers;
 
                     // request is over when we hit a single blank line 
@@ -122,8 +123,9 @@ public class proxyd {
 
                     // get the requested server from the request
                     host = getHost(request);
+                    method = getMethod(request);
 
-                    System.out.println("request for: " + host);
+                    System.out.println(method + " request for: " + host);
 
                     Byte[] requestArray = 
                         byteRequest.toArray(new Byte[0]);
@@ -268,7 +270,7 @@ public class proxyd {
     private String getMethod(String request) {
 
         String[] headers = request.split("\n");
-        String method = headers[1].split(" ")[1];
+        String method = headers[0].split(" ")[0];
 
         return method;
     }
