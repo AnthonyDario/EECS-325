@@ -264,6 +264,19 @@ public class proxyd {
     }
 
     /**
+     * This gets the request method from a request
+     * @param request the request to parse
+     * @return the request method
+     */
+    private String getMethod(String request) {
+
+        String[] headers = request.split("\n");
+        String method = headers[1].split(" ")[1];
+
+        return method;
+    }
+
+    /**
      * This returns the content length if the content length header exists, if 
      * there is no content length header then this will return -1
      * @param response the request we want the content length of
