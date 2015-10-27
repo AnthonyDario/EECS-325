@@ -3,13 +3,16 @@ import java.net.*;
 import java.util.*;
 
 /**
- * A simple web proxy
+ * A simple web proxy that will forward HTTP requests and return the responses.
+ * When running the proxy use the argument -port <port#> to specify which port 
+ * to run the proxy on. 
  * @author Anthony Dario
  */
 public class proxyd {
 
     private Socket client;
     private Socket server;
+
     /**
      * This will start the server
      *
@@ -17,10 +20,13 @@ public class proxyd {
      * @param remotePort    The outward facing port
      * @param localPort     The localPort for the proxy
      */
-    private void runServer(int remotePort, int localPort) 
-                                  throws IOException{
+    private void runServer(int remotePort, 
+                           int localPort) 
+                           throws IOException{
 
+        // a count of the connections gone through this proxy
         int count = 0;
+
         // Socket that listens for communications
         ServerSocket localSocket = new ServerSocket(localPort);
 
@@ -28,7 +34,6 @@ public class proxyd {
         final byte[] requestStream = new byte[1024];
         byte[] replyStream = new byte[4096];
 
-        System.out.println("starting loop");
         // the server loop
         while (true){
     
@@ -38,6 +43,7 @@ public class proxyd {
             try {
 
                 count++;
+
                 // wait for a connection
                 System.out.println("waiting for connection " + count + "...");
                 client = localSocket.accept();
@@ -50,12 +56,13 @@ public class proxyd {
                 // forward the clients request to the server
                 sendRequest(clientInput, clientOutput);
                                 
-                System.out.println("\nrequest sent\n");
+                System.out.println("request handled\n");
 
             }
             catch (IOException e) {
                 System.err.println(e);
             }
+            // make sure that the sockets are closed
             finally {
                 try{
                     if (server != null) {
@@ -96,7 +103,10 @@ public class proxyd {
                     String host = "";
                     String[] headers;
 
-                    while ((byteRead = clientInput.read()) >= 0) {
+                    // request is over when we hit a single blank line 
+                    while (newLines < 4) {
+
+                        byteRead = clientInput.read();
 
                         byteRequest.add((byte)byteRead);
                         request += (char)byteRead;
@@ -108,27 +118,21 @@ public class proxyd {
                         else {
                             newLines = 0;
                         }
-                        if (newLines == 4) {
-                            System.out.println("\n" + request);
-                            host = getHost(request);
-                            Byte[] requestArray = 
-                                byteRequest.toArray(new Byte[0]);
-
-                            response = recieveResponse(host, requestArray);
-
-                            System.out.println("got response: \n");
-                            /*
-                            for(int i = 0; i < response.length; i++) {
-                                System.out.print((char)response[i]);
-                            }
-                            */
-                            clientOutput.write(response);
-                            clientOutput.flush();
-                            System.out.println("wrote to client");
-
-                            break;
-                        }
                     }
+
+                    // get the requested server from the request
+                    host = getHost(request);
+
+                    System.out.println("request for: " + host);
+
+                    Byte[] requestArray = 
+                        byteRequest.toArray(new Byte[0]);
+
+                    // get the response from the host and write it to the client
+                    response = recieveResponse(host, requestArray);
+                    clientOutput.write(response);
+                    clientOutput.flush();
+
                 } catch (Exception e) {
                     System.out.println(e);
                 }
@@ -158,7 +162,6 @@ public class proxyd {
         try {
             byte[] byteRequest = toPrimativeArray(request);
             server = new Socket(host, 80);
-            System.out.println("made the socket");
            
             // get server Streams
             final InputStream serverInput = server.getInputStream();
@@ -177,7 +180,6 @@ public class proxyd {
 
                 byteRead = serverInput.read();
 
-                //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
                 response += (char)byteRead;
                 byteResponse.add((byte)byteRead);
 
@@ -191,12 +193,9 @@ public class proxyd {
 
             }
 
-            System.out.println("headers: \n" + response);
-
-            // get the length of the response body 
+            // depending on headers, read the length of the response body 
             int contentLength;
             if ((contentLength = getContentLength(response)) >= 0){
-               System.out.println("\nContent-Length: " + contentLength); 
 
                for(int i = 0; i < contentLength; i++) {
                    byteRead = serverInput.read();
@@ -225,10 +224,8 @@ public class proxyd {
 
                 }
             }
-            else {
-                System.out.println("cached");
-            }
 
+            // close the server and return the response
             server.close();
 
             return toPrimativeArray(byteResponse.toArray(new Byte[0]));
@@ -299,7 +296,6 @@ public class proxyd {
                     lengthString.substring(0, lengthString.length() - 1);
 
                 length = Integer.parseInt(lengthString);
-                System.out.println("length: " + length);
             }
         }
 
@@ -349,10 +345,14 @@ public class proxyd {
     public static void main(String[] args) throws IOException {
         
         proxyd proxy = new proxyd();
-        // Constants
         String host = "localhost";
         int remotePort = 100;
         int localPort = 5000;
+
+        // determine the port to tun on
+        if (args.length > 0 && args[0].equals("-port")) {
+            localPort = Integer.parseInt(args[1]);
+        }
 
         // Start-up message
         System.out.println("Starting proxy for " + host + ":" + remotePort
