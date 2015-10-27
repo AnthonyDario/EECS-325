@@ -99,7 +99,6 @@ public class proxyd {
                     int newLines = 0;
                     byte[] response;
                     List<Byte> byteRequest = new ArrayList<Byte>();
-                    String request = "";
                     String host = "";
                     String method = "";
                     String[] headers;
@@ -110,7 +109,6 @@ public class proxyd {
                         byteRead = clientInput.read();
 
                         byteRequest.add((byte)byteRead);
-                        request += (char)byteRead;
  
                         if ((char) byteRead == '\n' || 
                             (char) byteRead == '\r') {
@@ -121,11 +119,19 @@ public class proxyd {
                         }
                     }
 
+                    // type manipulation
+                    byte[] request = 
+                        toPrimativeArray(byteRequest.toArray(new Byte[0]));
+
                     // get the requested server from the request
                     host = getHost(request);
                     method = getMethod(request);
 
                     System.out.println(method + " request for: " + host);
+
+                    if (!method.equals("GET")) {
+                        
+                    }
 
                     Byte[] requestArray = 
                         byteRequest.toArray(new Byte[0]);
@@ -195,37 +201,8 @@ public class proxyd {
 
             }
 
-            // depending on headers, read the length of the response body 
-            int contentLength;
-            if ((contentLength = getContentLength(response)) >= 0){
+            byte[] responseBody = getBody(serverInput, response);
 
-               for(int i = 0; i < contentLength; i++) {
-                   byteRead = serverInput.read();
-                   response += (char)byteRead;
-                   byteResponse.add((byte)byteRead);
-               }
-            }
-            else if (isChunked(response)){
-
-                newLines = 0;
-                while (newLines < 4){
-
-                    byteRead = serverInput.read();
-
-                    //System.out.printf("%3d : %s\n", byteRead, (char)byteRead);
-                    response += (char)byteRead;
-                    byteResponse.add((byte)byteRead);
-
-                    if ((char) byteRead == '\n' || 
-                        (char) byteRead == '\r') {
-                        newLines++;
-                    }
-                    else {
-                        newLines = 0;
-                    }
-
-                }
-            }
 
             // close the server and return the response
             server.close();
@@ -249,14 +226,59 @@ public class proxyd {
     }
 
     /**
+     * This method gets the request body from a stream
+     * @param stream the stream to get the body from
+     * @param headers the headers of the request
+     * @return body the request body
+     */
+    private byte[] getBody(InputStream stream, String headers) 
+        throws IOException {
+
+        // depending on headers, read the length of the response body 
+        List<Byte> byteResponse = new ArrayList<Byte>(); 
+        int contentLength;
+        int byteRead;
+        if ((contentLength = getContentLength(headers)) >= 0){
+
+           for(int i = 0; i < contentLength; i++) {
+               byteRead = stream.read();
+               byteResponse.add((byte)byteRead);
+           }
+        }
+        else if (isChunked(headers)) {
+
+            int newLines = 0;
+            while (newLines < 4){
+
+                byteRead = stream.read();
+
+                byteResponse.add((byte)byteRead);
+
+                if ((char) byteRead == '\n' || 
+                    (char) byteRead == '\r') {
+                    newLines++;
+                }
+                else {
+                    newLines = 0;
+                }
+
+            }
+        }
+
+        return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+    }
+
+    /**
      * This gets the host from a request
      * @param request the request to parse
      * @return the host
      */
-    private String getHost(String request) {
+    private String getHost(byte[] request) {
+
+        String headers = byteArrayToString(request);
         
-        String[] headers = request.split("\n");
-        String host = headers[1].split(" ")[1];
+        String[] headersArray = headers.split("\n");
+        String host = headersArray[1].split(" ")[1];
         host = host.substring(0, host.length() - 1);
 
         return host;
@@ -267,10 +289,12 @@ public class proxyd {
      * @param request the request to parse
      * @return the request method
      */
-    private String getMethod(String request) {
+    private String getMethod(byte[] request) {
 
-        String[] headers = request.split("\n");
-        String method = headers[0].split(" ")[0];
+        String headers = byteArrayToString(request);
+
+        String[] headersArray = headers.split("\n");
+        String method = headersArray[0].split(" ")[0];
 
         return method;
     }
@@ -337,6 +361,22 @@ public class proxyd {
         }
 
         return output;
+    }
+
+    /**
+     * This converts a Byte array into a string
+     * @param array the byte array
+     * @return The string
+     */
+    private String byteArrayToString(byte[] array) {
+
+        String convert = "";
+
+        for (int i = 0; i < array.length; i++) {
+            convert += (char)array[i];
+        }
+
+        return convert;
     }
 
     /**
