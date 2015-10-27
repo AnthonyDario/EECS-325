@@ -337,7 +337,7 @@ public class proxyd {
         int localPort = 5000;
 
         // determine the port to tun on
-        if (args[0].equals("-port")) {
+        if (args.length > 0 && args[0].equals("-port")) {
             localPort = Integer.parseInt(args[1]);
         }
 
