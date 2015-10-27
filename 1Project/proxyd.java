@@ -167,7 +167,6 @@ public class proxyd {
         
         try {
             server = new Socket(host, 80);
-            System.out.println("made the socket to host: " + host);
            
             // get server Streams
             final InputStream serverInput = server.getInputStream();
@@ -177,7 +176,7 @@ public class proxyd {
             serverOutput.write(request);
             serverOutput.flush();
 
-            // get the servers response
+            // get the servers response headers
             List<Byte> byteResponse = new ArrayList<Byte>(); 
             int byteRead;
             int newLines = 0;
@@ -197,15 +196,15 @@ public class proxyd {
 
             }
 
+            // get the full response
             byte[] responseHeaders = 
                 toPrimativeArray(byteResponse.toArray(new Byte[0]));
             byte[] responseBody = getBody(serverInput, responseHeaders);
 
+            byte[] response = concat(responseHeaders, responseBody);
+
             // close the server and return the response
             server.close();
-
-            // get the full response
-            byte[] response = concat(responseHeaders, responseBody);
 
             return response;
 
@@ -248,18 +247,28 @@ public class proxyd {
         else if (isChunked(headers)) {
 
             int newLines = 0;
-            while (newLines < 4){
+            boolean zeroChunk = false;
+            while (newLines < 2){
 
                 byteRead = stream.read();
 
                 byteResponse.add((byte)byteRead);
 
-                if ((char) byteRead == '\n' || 
-                    (char) byteRead == '\r') {
+                if ((char)byteRead == 0) {
+                    zeroChunk = true;
+                    System.out.println("zero: true");
+                }
+                else if (zeroChunk && 
+                         ((char)byteRead == '\n' ||
+                          (char)byteRead == '\r')) {
+
                     newLines++;
+                    System.out.println("newLines: " + newLines);
                 }
                 else {
+                    zeroChunk = false;
                     newLines = 0;
+                    System.out.println("zeroChunk: false");
                 }
 
             }
