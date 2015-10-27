@@ -133,11 +133,8 @@ public class proxyd {
                         
                     }
 
-                    Byte[] requestArray = 
-                        byteRequest.toArray(new Byte[0]);
-
                     // get the response from the host and write it to the client
-                    response = recieveResponse(host, requestArray);
+                    response = recieveResponse(host, request);
                     clientOutput.write(response);
                     clientOutput.flush();
 
@@ -165,22 +162,21 @@ public class proxyd {
      * @param host The host for the socket
      * @param port the port for the socket
      */
-    private byte[] recieveResponse(String host, Byte[] request) {
+    private byte[] recieveResponse(String host, byte[] request) {
         
         try {
-            byte[] byteRequest = toPrimativeArray(request);
             server = new Socket(host, 80);
+            System.out.println("made the socket to host: " + host);
            
             // get server Streams
             final InputStream serverInput = server.getInputStream();
             final OutputStream serverOutput = server.getOutputStream();
 
             // send the clients request
-            serverOutput.write(byteRequest);
+            serverOutput.write(request);
             serverOutput.flush();
 
             // get the servers response
-            String response = "";
             List<Byte> byteResponse = new ArrayList<Byte>(); 
             int byteRead;
             int newLines = 0;
@@ -188,7 +184,6 @@ public class proxyd {
 
                 byteRead = serverInput.read();
 
-                response += (char)byteRead;
                 byteResponse.add((byte)byteRead);
 
                 if ((char) byteRead == '\n' || 
@@ -201,13 +196,17 @@ public class proxyd {
 
             }
 
-            byte[] responseBody = getBody(serverInput, response);
-
+            byte[] responseHeaders = 
+                toPrimativeArray(byteResponse.toArray(new Byte[0]));
+            byte[] responseBody = getBody(serverInput, responseHeaders);
 
             // close the server and return the response
             server.close();
 
-            return toPrimativeArray(byteResponse.toArray(new Byte[0]));
+            // get the full response
+            byte[] response = concat(responseHeaders, responseBody);
+
+            return response;
 
         }
         catch (Exception e) {
@@ -231,7 +230,7 @@ public class proxyd {
      * @param headers the headers of the request
      * @return body the request body
      */
-    private byte[] getBody(InputStream stream, String headers) 
+    private byte[] getBody(InputStream stream, byte[] headers) 
         throws IOException {
 
         // depending on headers, read the length of the response body 
@@ -305,12 +304,12 @@ public class proxyd {
      * @param response the request we want the content length of
      * @return the length of the request body or -1 if the header doesn't exist
      */
-    private int getContentLength(String response) {
+    private int getContentLength(byte[] response) {
 
         int length = -1;
         String lengthString;
         String currentHeader;
-        String[] headers = response.split("\n");
+        String[] headers = byteArrayToString(response).split("\n");
 
         for (int i = 0; i < headers.length; i++) {
 
@@ -333,10 +332,10 @@ public class proxyd {
      * @param response the response being checked
      * @return true if the response is chunked
      */
-    private boolean isChunked(String response) {
+    private boolean isChunked(byte[] response) {
         
         String currentHeader;
-        String[] headers = response.split("\n");
+        String[] headers = byteArrayToString(response).split("\n");
         
         for(int i = 0; i < headers.length; i++) {
             currentHeader =  headers[i].substring(0, headers[i].length() - 1);
@@ -377,6 +376,26 @@ public class proxyd {
         }
 
         return convert;
+    }
+
+    /**
+     * This concatenates two byte arrays into one
+     * @param front the first array
+     * @param back the second array
+     */
+    private byte[] concat(byte[] front, byte[] back) {
+
+        byte[] full = new byte[front.length + back.length];
+
+        for (int i = 0; i < front.length; i++) {
+            full[i] = front[i];
+        }
+
+        for(int i = 0; i < back.length; i++) {
+            full[i + front.length] = back[i];
+        }
+
+        return full;
     }
 
     /**
