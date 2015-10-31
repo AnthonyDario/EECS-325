@@ -248,27 +248,24 @@ public class proxyd {
 
             int newLines = 0;
             boolean zeroChunk = false;
-            while (newLines < 2){
+            while (newLines < 4){
 
                 byteRead = stream.read();
 
                 byteResponse.add((byte)byteRead);
 
-                if ((char)byteRead == 0) {
+                if ((char)byteRead == '0') {
                     zeroChunk = true;
-                    System.out.println("zero: true");
                 }
                 else if (zeroChunk && 
                          ((char)byteRead == '\n' ||
                           (char)byteRead == '\r')) {
 
                     newLines++;
-                    System.out.println("newLines: " + newLines);
                 }
                 else {
                     zeroChunk = false;
                     newLines = 0;
-                    System.out.println("zeroChunk: false");
                 }
 
             }
