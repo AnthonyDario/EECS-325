@@ -1,3 +1,4 @@
+import time
 import socket
 from struct import *
 
@@ -20,10 +21,12 @@ send_socket.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
 
 # bind the sockets
 recv_socket.bind(("", port))
+start = time.time()
 send_socket.sendto("", (addr, port))
 
 # get the data
 data , address  = recv_socket.recvfrom(512)
+end = time.time()
 
 # parse the data first 20 characters are the ip header
 ip_header = data[0:20]
@@ -31,6 +34,7 @@ iph = unpack('BBHHHBBH4s4s', ip_header)
 
 packet_ttl = iph[5]
 
+# we have the TTL from the source, how to figure out actual ttl...
 print 'TTL: ' + str(packet_ttl)
-
+print 'Time: ' + str(end - start)
 
