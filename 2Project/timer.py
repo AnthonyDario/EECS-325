@@ -16,12 +16,14 @@ def main(dest_name):
     icmp = socket.getprotobyname('icmp')
     udp = socket.getprotobyname('udp')
     ttl = 1
+    max_hops = 30
 
     while True:
 
         # create the sockets
         recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
         send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, udp)
+        send_socket.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
 
         # bind the recv socket to listen for all hosts on our port
         # bind the send socket to send to our destination
