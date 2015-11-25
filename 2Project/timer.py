@@ -1,63 +1,36 @@
 import socket
+from struct import *
 
-# create the socket
-#try:
-#    s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
-#except socket.error , msg:
-#    print 'Socket could not be created. Error Code : ' + str(msg[0]) + \
-#          ' Message ' + msg[1]
-#sys.exit()
+# some useful protocol definitions
+icmp = socket.getprotobyname('icmp')
+udp = socket.getprotobyname('udp')
+name = 'google.com'
+ttl = 255
+addr = socket.gethostbyname(name)
 
-def main(dest_name):
+# we will listen on port 33434, like traceroute
+port = 33434
 
-    # some useful vriables
-    dest_addr = socket.gethostbyname(dest_name)
-    port = 33434
-    icmp = socket.getprotobyname('icmp')
-    udp = socket.getprotobyname('udp')
-    ttl = 1
-    max_hops = 30
+# create our sockets
+recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
+send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, udp)
 
-    while True:
+# change the fields
+send_socket.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
 
-        # create the sockets
-        recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
-        send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, udp)
-        send_socket.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
+# bind the sockets
+recv_socket.bind(("", port))
+send_socket.sendto("", (addr, port))
 
-        # bind the recv socket to listen for all hosts on our port
-        # bind the send socket to send to our destination
-        recv_socket.bind(("", port))
-        send_socket.sendto("", (dest_name, port))
+# get the data
+data , address  = recv_socket.recvfrom(512)
 
-        # try and get data from the address
-        curr_addr = None
-        try:
-            # only want the address not the data
-            _, curr_addr = recv_socket.recvfrom(512)
-            curr_addr = curr_addr[0]
+# parse the data first 20 characters are the ip header
+ip_header = data[0:20]
+iph = unpack('BBHHHBBH4s4s', ip_header)
 
-            # get the name
-            try:
-                curr_name = socket.gethostbyaddr(curr_addr)[0]
-            except socket.error:
-                curr_name = curr_addr
-        except socket.error:
-            pass
-        finally:
-            send_socket.close()
-            recv_socket.close()
+packet_ttl = iph[5]
 
-        if curr_addr is not None:
-            curr_host = '%s %s' % (curr_name, curr_addr)
-        else:
-            curr_host = '*'
-        
-        print '%d\t%s' % (ttl, curr_host)
+print 'TTL: ' + str(packet_ttl)
 
-        ttl += 1
-        if curr_addr == dest_addr or ttl > max_hops:
-            break
 
-if __name__ == '__main__':
-    main('google.com')
