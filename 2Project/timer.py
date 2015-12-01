@@ -34,61 +34,64 @@ def get_time(addr, times_checked):
     outgoing = [] 
     potential_errors = {}
 
+
+
     start = time.time()
+    send_socket.sendto(str(id_num), (addr, port))
 
     readable, writable, errors = \
         select.select(incoming, outgoing, potential_errors, timeout)
 
-    send_socket.sendto("", (addr, port))
-
-    print readable
-
+    end = time.time()
     if len(readable) == 0:
         # we couldn't get any data try rechecking
         print 'could not get data from socket: ' + addr +\
               ' on attempt ' + str(3 - times_checked)
-
+        if times_checked > 0:
+            get_time(addr, times_checked - 1)
     else:
-        data, address = recv_socket.recvfrom(1024)
-        end = time.time()
+        
+        response_id = -1
 
-        # parse the data first 20 characters are the ip header
-        icmp_header = data[20:28]
-        our_ip_header = data[28:48]
-        contents = data[56:58]
+        while response_id != str(id_num):
 
-        iph = unpack('BBHHHBBH4s4s', our_ip_header)
-        icmph = unpack('bbHHh', icmp_header)
-        response_id = unpack(str(len(contents)) + 's', contents)
+            data, address = recv_socket.recvfrom(1024)
+            # parse the data first 20 characters are the ip header
+            icmp_header = data[20:28]
+            our_ip_header = data[28:48]
+            contents = data[56:58]
 
-        packet_ttl = iph[5] 
-        icmp_type, icmp_code, _, _, _ = icmph
+            iph = unpack('BBHHHBBH4s4s', our_ip_header)
+            icmph = unpack('bbHHh', icmp_header)
+            response_id = unpack(str(len(contents)) + 's', contents)[0]
 
-        try:
-            hostname = socket.gethostbyaddr(address[0])[0]
-        except socket.error:
-            hostname = 'unknown'
+            packet_ttl = iph[5] 
+            icmp_type, icmp_code, _, _, _ = icmph
 
-        print address[0] + ' : ' + hostname 
-        print '\tcode: ' + str(icmp_code)
-        print '\ttype: ' + str(icmp_type)
-        print '\tnumber of hops: ' + str(ttl - packet_ttl)
-        print '\tTTL: ' + str(packet_ttl)
-        print '\tTime: ' + str((end - start) * 1000)
-        print '\tID: ' + str(response_id)
-        print '\tour ID: ' + str(id_num)
+            readable, writable, errors = \
+                select.select(incoming, outgoing, potential_errors, timeout)
 
-        #readable, writable, errors = \
-        #    select.select(incoming, outgoing, potential_errors, timeout)
-#
-#        # in case an address sends back multiple packets for whatever reason
-#        while len(readable) == 1:
-#            data, address = recv_socket.recvfrom(1024)
-#            contents = data[56:58]
-#            print unpack(str(len(contents)) + 's', contents)
-#            readable, writable, errors = \
-#                select.select(incoming, outgoing, potential_errors, timeout)
+            if len(readable) == 0:
+                response_id == -1
+                break
+            
+        if response_id == str(id_num):
+            try:
+                hostname = socket.gethostbyaddr(address[0])[0]
+            except socket.error:
+                hostname = 'unknown'
 
+            print address[0] + ' : ' + hostname 
+            print '\tcode: ' + str(icmp_code)
+            print '\ttype: ' + str(icmp_type)
+            print '\tnumber of hops: ' + str(ttl - packet_ttl)
+            print '\tTTL: ' + str(packet_ttl)
+            print '\tTime: ' + str((end - start) * 1000)
+            print '\tID: ' + str(response_id)
+            print '\tour ID: ' + str(id_num)
+
+        else:
+            print 'did not get a packet with the proper ID'
     send_socket.close()
     recv_socket.close()
 
