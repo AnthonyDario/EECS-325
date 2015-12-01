@@ -105,6 +105,6 @@ addresses = open('targets.txt', 'r')
 
 for address in addresses:
 
-    address = address.rstrip()
+    address.rstrip()
     print '\ncalling on address: ' + address
     get_time(address, 2)
