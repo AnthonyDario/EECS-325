@@ -36,10 +36,11 @@ for addr in addresses:
     potential_errors = {}
 
     start = time.time()
-    send_socket.sendto("", (addr, port))
 
     readable, writable, errors = \
         select.select(incoming, outgoing, potential_errors, timeout)
+
+    send_socket.sendto("", (addr, port))
 
     if len(readable) != 1:
         print 'could not get data from socket: ' + addr
@@ -55,6 +56,7 @@ for addr in addresses:
         icmph = unpack('bbHHh', icmp_header)
 
         packet_ttl = iph[5] 
+        icmp_type, icmp_code, _, _, _ = icmph
 
         # we have the TTL from the source, how to figure out actual ttl...
         try:
@@ -62,7 +64,11 @@ for addr in addresses:
         except socket.error:
             hostname = 'unknown'
         print address[0] + ' : ' + hostname 
+        print '\tcode: ' + str(icmp_code)
+        print '\ttype: ' + str(icmp_type)
+        print '\tnumber of hops: ' + str(ttl - packet_ttl)
         print '\tTTL: ' + str(packet_ttl)
-        print '\tTime: ' + str(end - start)
+        print '\tTime: ' + str((end - start) * 1000)
 
-
+send_socket.close()
+recv_socket.close()
