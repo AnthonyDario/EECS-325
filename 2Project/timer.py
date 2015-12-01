@@ -13,7 +13,7 @@ for addr in addresses:
     icmp = socket.getprotobyname('icmp')
     udp = socket.getprotobyname('udp')
     ttl = 32
-    timeout = 3
+    timeout = 1
     addr = addr.rstrip()
 
     # we will listen on port 33434, like traceroute
@@ -36,7 +36,7 @@ for addr in addresses:
     potential_errors = {}
 
     start = time.time()
-    send_socket.sendto("", (addr, 2140))
+    send_socket.sendto("", (addr, 33434))
 
     readable, writable, errors = \
         select.select(incoming, outgoing, potential_errors, timeout)
@@ -52,9 +52,13 @@ for addr in addresses:
 
         # parse the data first 20 characters are the ip header
         ip_header = data[0:20]
+        icmp_header = data[20:28]
         iph = unpack('BBHHHBBH4s4s', ip_header)
+        icmph = unpack('bbHHh', icmp_header)
 
         packet_ttl = iph[5]
+        print icmph
+        icmp_type, icmp_code, _, _, _ = icmph
 
         # we have the TTL from the source, how to figure out actual ttl...
         try:
@@ -64,6 +68,6 @@ for addr in addresses:
         print address[0] + ' : ' + hostname 
         print '\tTTL: ' + str(packet_ttl)
         print '\tTime: ' + str(end - start)
-        print '\tdata: ' + data
+        #print '\tdata: ' + repr(data)
 
 
