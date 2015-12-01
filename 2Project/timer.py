@@ -4,17 +4,15 @@ import socket
 import errno
 from struct import *
 
-# file stuff
-addresses = open('targets.txt', 'r')
+id = 0
 
-for addr in addresses:
+def get_time(addr, times_checked):
 
-    # some useful variables
+    global id
     icmp = socket.getprotobyname('icmp')
     udp = socket.getprotobyname('udp')
     ttl = 32
     timeout = 1
-    addr = addr.rstrip()
 
     # we will listen on port 33434, like traceroute
     port = 33434
@@ -28,7 +26,7 @@ for addr in addresses:
     send_socket.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
 
     # bind the socket
-    recv_socket.bind(("", port))
+    recv_socket.bind((str(id), port))
 
     # for the select call
     incoming = [ recv_socket ]
@@ -41,9 +39,14 @@ for addr in addresses:
         select.select(incoming, outgoing, potential_errors, timeout)
 
     send_socket.sendto("", (addr, port))
+    print 'sent to ' + addr
 
-    if len(readable) != 1:
-        print 'could not get data from socket: ' + addr
+    if len(readable) == 0:
+        # we couldn't get any data try rechecking
+        print 'could not get data from socket: ' + addr +\
+              ' on attempt ' + str(3 - times_checked)
+        if times_checked > 0:
+            get_time(addr, times_checked - 1)
 
     else:
         data, address = recv_socket.recvfrom(1024)
@@ -70,5 +73,27 @@ for addr in addresses:
         print '\tTTL: ' + str(packet_ttl)
         print '\tTime: ' + str((end - start) * 1000)
 
-send_socket.close()
-recv_socket.close()
+        readable, writable, errors = \
+            select.select(incoming, outgoing, potential_errors, timeout)
+
+        # in case an address sends back multiple packets for whatever reason
+        while len(readable) == 1:
+            recv_socket.recvfrom(1024)
+            readable, writable, errors = \
+                select.select(incoming, outgoing, potential_errors, timeout)
+
+    send_socket.close()
+    recv_socket.close()
+
+# match
+# graphs
+# write a report
+
+# file stuff
+addresses = open('targets.txt', 'r')
+
+for address in addresses:
+
+    address = address.rstrip()
+    print '\ncalling on address: ' + address
+    get_time(address, 2)
