@@ -36,17 +36,19 @@ for addr in addresses:
     potential_errors = {}
 
     start = time.time()
-    send_socket.sendto("", (addr, port))
+    send_socket.sendto("", (addr, 2140))
 
     readable, writable, errors = \
         select.select(incoming, outgoing, potential_errors, timeout)
-    
-    try:
+
+    print readable
+
+    if len(readable) != 1:
+        print 'could not get data from socket: ' + addr
+
+    else:
         data, address = recv_socket.recvfrom(1024)
         end = time.time()
-    except socket.error, e:
-        print 'could not get data from socket: ' + addr
-    else:
 
         # parse the data first 20 characters are the ip header
         ip_header = data[0:20]
@@ -62,4 +64,6 @@ for addr in addresses:
         print address[0] + ' : ' + hostname 
         print '\tTTL: ' + str(packet_ttl)
         print '\tTime: ' + str(end - start)
+        print '\tdata: ' + data
+
 
