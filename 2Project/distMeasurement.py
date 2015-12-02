@@ -14,7 +14,7 @@ def get_time(addr, times_checked):
     icmp = socket.getprotobyname('icmp')
     udp = socket.getprotobyname('udp')
     ttl = 32
-    timeout = 1
+    timeout = 3
 
     # we will listen on port 33434, like traceroute
     port = 33434
@@ -22,7 +22,6 @@ def get_time(addr, times_checked):
     # create our sockets
     recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, udp)
-    recv_socket.setblocking(0)
 
     # change the fields
     send_socket.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
@@ -57,35 +56,35 @@ def get_time(addr, times_checked):
                 })
     else:
         
-        response_id = -1
-        
-        # make sure we are recieving the correct packet back
-        while response_id != str(id_num):
+        data, address = recv_socket.recvfrom(512)
 
-            data, address = recv_socket.recvfrom(1024)
+        # parsing the data 
+        icmp_header = data[20:28]
+        our_ip_header = data[28:48]
+        contents = data[56:]
 
-            # parsing the data 
-            icmp_header = data[20:28]
-            our_ip_header = data[28:48]
-            contents = data[56:58]
+        iph = unpack('BBHHHBBH4s4s', our_ip_header)
+        icmph = unpack('bbHHh', icmp_header)
+        response_id = unpack(str(len(contents)) + 's', contents)[0]
 
-            iph = unpack('BBHHHBBH4s4s', our_ip_header)
-            icmph = unpack('bbHHh', icmp_header)
-            response_id = unpack(str(len(contents)) + 's', contents)[0]
+        packet_ttl = iph[5] 
+        icmp_type, icmp_code, _, _, _ = icmph
 
-            packet_ttl = iph[5] 
-            icmp_type, icmp_code, _, _, _ = icmph
+        print response_id
 
-            readable, writable, errors = \
-                select.select(incoming, outgoing, potential_errors, timeout)
-
-            if len(readable) == 0:
-                response_id == -1
-                break
-            
         # if the response ID isn't correct then we have not recieved the packet
-        if response_id == str(id_num):
+        if response_id and response_id != str(id_num):
+            print 'did not get a packet with the proper ID'
+            output.writerow(
+                {
+                 'IP': address[0], 
+                 'RTT': 'N/A', 
+                 'Hops': 'N/A'
+                })
+
+        else:
             try:
+                print 'resolving hostname...'
                 hostname = socket.gethostbyaddr(address[0])[0]
             except socket.error:
                 hostname = 'unknown'
@@ -93,8 +92,6 @@ def get_time(addr, times_checked):
             print address[0] + ' : ' + hostname 
             print '\tnumber of hops: ' + str(ttl - packet_ttl)
             print '\tTime: ' + str((end - start) * 1000)
-            print '\tID: ' + str(response_id)
-            print '\tour ID: ' + str(id_num)
 
             output.writerow(
                 {
@@ -103,14 +100,6 @@ def get_time(addr, times_checked):
                  'Hops': ttl - packet_ttl
                 })
 
-        else:
-            print 'did not get a packet with the proper ID'
-            output.writerow(
-                {
-                 'IP': address[0], 
-                 'RTT': 'N/A', 
-                 'Hops': 'N/A'
-                })
     send_socket.close()
     recv_socket.close()
 
@@ -125,6 +114,6 @@ output.writeheader()
 
 for address in addresses:
 
-    address = address.rstrip()
+    address = socket.gethostbyname(address.rstrip())
     print '\ncalling on address: ' + address
     get_time(address, 2)
