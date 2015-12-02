@@ -2,6 +2,7 @@ import time
 import select
 import socket
 import errno
+import csv
 from struct import *
 
 id_num = 0
@@ -34,8 +35,6 @@ def get_time(addr, times_checked):
     outgoing = [] 
     potential_errors = {}
 
-
-
     start = time.time()
     send_socket.sendto(str(id_num), (addr, port))
 
@@ -49,14 +48,22 @@ def get_time(addr, times_checked):
               ' on attempt ' + str(3 - times_checked)
         if times_checked > 0:
             get_time(addr, times_checked - 1)
+        else:
+            output.writerow(
+                {'IP': addr, 
+                 'RTT': 'N/A', 
+                 'Hops': 'N/A'
+                })
     else:
         
         response_id = -1
-
+        
+        # make sure we are recieving the correct packet back
         while response_id != str(id_num):
 
             data, address = recv_socket.recvfrom(1024)
-            # parse the data first 20 characters are the ip header
+
+            # parsing the data 
             icmp_header = data[20:28]
             our_ip_header = data[28:48]
             contents = data[56:58]
@@ -75,6 +82,7 @@ def get_time(addr, times_checked):
                 response_id == -1
                 break
             
+        # if the response ID isn't correct then we have not recieved the packet
         if response_id == str(id_num):
             try:
                 hostname = socket.gethostbyaddr(address[0])[0]
@@ -82,29 +90,38 @@ def get_time(addr, times_checked):
                 hostname = 'unknown'
 
             print address[0] + ' : ' + hostname 
-            print '\tcode: ' + str(icmp_code)
-            print '\ttype: ' + str(icmp_type)
             print '\tnumber of hops: ' + str(ttl - packet_ttl)
-            print '\tTTL: ' + str(packet_ttl)
             print '\tTime: ' + str((end - start) * 1000)
             print '\tID: ' + str(response_id)
             print '\tour ID: ' + str(id_num)
 
+            output.writerow(
+                {'IP': address[0], 
+                 'RTT': end - start, 
+                 'Hops': ttl - packet_ttl
+                })
+
         else:
             print 'did not get a packet with the proper ID'
+            output.writerow(
+                {'IP': address[0], 
+                 'RTT': 'N/A', 
+                 'Hops': 'N/A'
+                })
     send_socket.close()
     recv_socket.close()
 
-# error with sending multiple
-# match
 # graphs
 # write a report
 
 # file stuff
 addresses = open('targets.txt', 'r')
+fieldnames = [ 'IP', 'RTT', 'Hops' ]
+output = csv.DictWriter(open('distances.csv', 'w'), fieldnames=fieldnames)
+output.writeheader()
 
 for address in addresses:
 
-    address.rstrip()
+    address = address.rstrip()
     print '\ncalling on address: ' + address
     get_time(address, 2)
