@@ -50,7 +50,8 @@ def get_time(addr, times_checked):
             get_time(addr, times_checked - 1)
         else:
             output.writerow(
-                {'IP': addr, 
+                {
+                 'IP': addr, 
                  'RTT': 'N/A', 
                  'Hops': 'N/A'
                 })
@@ -96,7 +97,8 @@ def get_time(addr, times_checked):
             print '\tour ID: ' + str(id_num)
 
             output.writerow(
-                {'IP': address[0], 
+                {
+                 'IP': address[0], 
                  'RTT': end - start, 
                  'Hops': ttl - packet_ttl
                 })
@@ -104,7 +106,8 @@ def get_time(addr, times_checked):
         else:
             print 'did not get a packet with the proper ID'
             output.writerow(
-                {'IP': address[0], 
+                {
+                 'IP': address[0], 
                  'RTT': 'N/A', 
                  'Hops': 'N/A'
                 })
@@ -117,7 +120,7 @@ def get_time(addr, times_checked):
 # file stuff
 addresses = open('targets.txt', 'r')
 fieldnames = [ 'IP', 'RTT', 'Hops' ]
-output = csv.DictWriter(open('distances.csv', 'w'), fieldnames=fieldnames)
+output = csv.DictWriter(open('times.csv', 'w'), fieldnames=fieldnames)
 output.writeheader()
 
 for address in addresses:

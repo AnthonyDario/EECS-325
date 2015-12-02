@@ -1,10 +1,15 @@
 import urllib2
 import json
+import csv
 from math import radians, sqrt, sin, cos, atan2
 
-addresses = open('targets.txt', 'r')
-
 RAD_EARTH = 6372.8
+
+fieldnames = [ 'IP', 'distance' ]
+
+addresses = open('targets.txt', 'r')
+output = csv.DictWriter(open('distances.csv', 'w'), fieldnames=fieldnames)
+output.writeheader()
 
 location = json.loads(urllib2.urlopen("http://freegeoip.net/json/").read())
 lat = radians(location['latitude'])
@@ -14,7 +19,7 @@ print lat
 print lon
 
 for address in addresses:
-    address.rstrip()
+    address = address.rstrip()
     content = (urllib2.urlopen("http://freegeoip.net/json/" + address).read())
     data = json.loads(content)
 
@@ -32,6 +37,12 @@ for address in addresses:
     c = atan2(y, x)
 
     dist = RAD_EARTH * c
+
+    output.writerow(
+        { 
+         'IP': address,
+         'distance': dist
+        })
 
     print data['ip']
     print '\tlatitude: ' + str(data['latitude'])
