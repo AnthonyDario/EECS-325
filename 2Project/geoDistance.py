@@ -52,5 +52,5 @@ for location in addresses:
     print data['ip']
     print '\tlatitude: ' + str(data['latitude'])
     print '\tlongitude: ' + str(data['longitude'])
-    print '\tdistance: ' + str(dist)
+    print '\tdistance: ' + str(dist) + 'km'
 
