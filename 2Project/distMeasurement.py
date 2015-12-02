@@ -7,6 +7,7 @@ from struct import *
 
 id_num = 0
 
+# prints out the RTT and number of hops to get to an address
 def get_time(addr, times_checked):
 
     global id_num
@@ -70,8 +71,6 @@ def get_time(addr, times_checked):
         packet_ttl = iph[5] 
         icmp_type, icmp_code, _, _, _ = icmph
 
-        print response_id
-
         # if the response ID isn't correct then we have not recieved the packet
         if response_id and response_id != str(id_num):
             print 'did not get a packet with the proper ID'
@@ -82,7 +81,12 @@ def get_time(addr, times_checked):
                  'Hops': 'N/A'
                 })
 
+        # icmp respons of 3 3 will return our IP header which is what
+        elif icmp_type != 3 and icmp_code != 3:
+            print 'Did not recieve proper response'
         else:
+
+            # try to find hostname for printing purposes
             try:
                 print 'resolving hostname...'
                 hostname = socket.gethostbyaddr(address[0])[0]
@@ -91,20 +95,17 @@ def get_time(addr, times_checked):
 
             print address[0] + ' : ' + hostname 
             print '\tnumber of hops: ' + str(ttl - packet_ttl)
-            print '\tTime: ' + str((end - start) * 1000)
+            print '\tTime: ' + str((end - start) * 1000) + 'ms'
 
             output.writerow(
                 {
                  'IP': address[0], 
-                 'RTT': end - start, 
+                 'RTT': (end - start) * 1000, 
                  'Hops': ttl - packet_ttl
                 })
 
     send_socket.close()
     recv_socket.close()
-
-# graphs
-# write a report
 
 # file stuff
 addresses = open('targets.txt', 'r')
@@ -114,6 +115,6 @@ output.writeheader()
 
 for address in addresses:
 
+    print '\ncalling on address: ' + address.rstrip()
     address = socket.gethostbyname(address.rstrip())
-    print '\ncalling on address: ' + address
     get_time(address, 2)
